@@ -1,0 +1,91 @@
+# this is an auto generated file. This will be overwritten
+mutation CreatePokemon($input: CreatePokemonInput!) {
+  createPokemon(input: $input) {
+    id
+    name
+    type
+    level
+    squad {
+      id
+      name
+      pokemons {
+        nextToken
+      }
+    }
+  }
+}
+mutation UpdatePokemon($input: UpdatePokemonInput!) {
+  updatePokemon(input: $input) {
+    id
+    name
+    type
+    level
+    squad {
+      id
+      name
+      pokemons {
+        nextToken
+      }
+    }
+  }
+}
+mutation DeletePokemon($input: DeletePokemonInput!) {
+  deletePokemon(input: $input) {
+    id
+    name
+    type
+    level
+    squad {
+      id
+      name
+      pokemons {
+        nextToken
+      }
+    }
+  }
+}
+mutation CreateBattleSquad($input: CreateBattleSquadInput!) {
+  createBattleSquad(input: $input) {
+    id
+    name
+    pokemons {
+      items {
+        id
+        name
+        type
+        level
+      }
+      nextToken
+    }
+  }
+}
+mutation UpdateBattleSquad($input: UpdateBattleSquadInput!) {
+  updateBattleSquad(input: $input) {
+    id
+    name
+    pokemons {
+      items {
+        id
+        name
+        type
+        level
+      }
+      nextToken
+    }
+  }
+}
+mutation DeleteBattleSquad($input: DeleteBattleSquadInput!) {
+  deleteBattleSquad(input: $input) {
+    id
+    name
+    pokemons {
+      items {
+        id
+        name
+        type
+        level
+      }
+      nextToken
+    }
+  }
+}

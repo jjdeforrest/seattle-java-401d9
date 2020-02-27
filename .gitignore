@@ -4,6 +4,7 @@
 ### Android ###
 # Built application files
 *.apk
+!app-debug.apk
 *.ap_
 
 # Files for the ART/Dalvik VM
@@ -209,3 +210,4 @@ Temporary Items
 
 # End of https://www.gitignore.io/api/java,macos,android,androidstudio
 **markdown-navigator.xml
+BuyCheapStuff

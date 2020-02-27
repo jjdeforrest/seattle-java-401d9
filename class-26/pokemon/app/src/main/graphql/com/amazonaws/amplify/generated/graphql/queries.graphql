@@ -1,0 +1,66 @@
+# this is an auto generated file. This will be overwritten
+query GetPokemon($id: ID!) {
+  getPokemon(id: $id) {
+    id
+    name
+    type
+    level
+    squad {
+      id
+      name
+      pokemons {
+        nextToken
+      }
+    }
+  }
+}
+query ListPokemons(
+  $filter: ModelPokemonFilterInput
+  $limit: Int
+  $nextToken: String
+) {
+  listPokemons(filter: $filter, limit: $limit, nextToken: $nextToken) {
+    items {
+      id
+      name
+      type
+      level
+      squad {
+        id
+        name
+      }
+    }
+    nextToken
+  }
+}
+query GetBattleSquad($id: ID!) {
+  getBattleSquad(id: $id) {
+    id
+    name
+    pokemons {
+      items {
+        id
+        name
+        type
+        level
+      }
+      nextToken
+    }
+  }
+}
+query ListBattleSquads(
+  $filter: ModelBattleSquadFilterInput
+  $limit: Int
+  $nextToken: String
+) {
+  listBattleSquads(filter: $filter, limit: $limit, nextToken: $nextToken) {
+    items {
+      id
+      name
+      pokemons {
+        nextToken
+      }
+    }
+    nextToken
+  }
+}

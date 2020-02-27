@@ -9,10 +9,26 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.room.Room;
 
+import android.os.Handler;
+import android.os.Looper;
+import android.os.Message;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
+import com.amazonaws.amplify.generated.graphql.CreateBattleSquadMutation;
+import com.amazonaws.amplify.generated.graphql.GetBattleSquadQuery;
+import com.amazonaws.amplify.generated.graphql.ListBattleSquadsQuery;
+import com.amazonaws.amplify.generated.graphql.ListPokemonsQuery;
+import com.amazonaws.amplify.generated.graphql.OnCreatePokemonSubscription;
+import com.amazonaws.mobile.config.AWSConfiguration;
+import com.amazonaws.mobileconnectors.appsync.AWSAppSyncClient;
+import com.amazonaws.mobileconnectors.appsync.AppSyncSubscriptionCall;
+import com.amazonaws.mobileconnectors.appsync.fetcher.AppSyncResponseFetchers;
+import com.apollographql.apollo.GraphQLCall;
+import com.apollographql.apollo.api.Response;
+import com.apollographql.apollo.exception.ApolloException;
 import com.ferreirae.pokemon.dummy.DummyContent;
 import com.ferreirae.pokemon.dummy.DummyContent.DummyItem;
 import com.ferreirae.pokemon.room.AppDatabase;
@@ -22,6 +38,12 @@ import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+
+import javax.annotation.Nonnull;
+
+import type.CreateBattleSquadInput;
+
+import static com.amazonaws.mobileconnectors.appsync.fetcher.AppSyncResponseFetchers.NETWORK_FIRST;
 
 /**
  * A fragment representing a list of Items.
@@ -36,6 +58,9 @@ public class PokemonFragment extends Fragment {
     // TODO: Customize parameters
     private int mColumnCount = 1;
     private OnListFragmentInteractionListener mListener;
+    private RecyclerView recyclerView;
+    private AWSAppSyncClient mAWSAppSyncClient;
+    private MyPokemonRecyclerViewAdapter adapter;
 
     /**
      * Mandatory empty constructor for the fragment manager to instantiate the
@@ -71,21 +96,94 @@ public class PokemonFragment extends Fragment {
         // Set the adapter
         if (view instanceof RecyclerView) {
             Context context = view.getContext();
-            RecyclerView recyclerView = (RecyclerView) view;
+            recyclerView = (RecyclerView) view;
             if (mColumnCount <= 1) {
                 recyclerView.setLayoutManager(new LinearLayoutManager(context));
             } else {
                 recyclerView.setLayoutManager(new GridLayoutManager(context, mColumnCount));
             }
-            AppDatabase db = Room.databaseBuilder(this.getContext().getApplicationContext(),
-                    AppDatabase.class, "pokemon")
-                    .allowMainThreadQueries()
-                    .build();
-            PokemonDAO dao = db.pokemonDAO();
-            List<Pokemon> listOfCoolPokemon = dao.getAll();
-            recyclerView.setAdapter(new MyPokemonRecyclerViewAdapter(listOfCoolPokemon, null));
         }
+        mAWSAppSyncClient = AWSAppSyncClient.builder()
+                .context(view.getContext().getApplicationContext())
+                .awsConfiguration(new AWSConfiguration(view.getContext().getApplicationContext()))
+                .build();
+
+        OnCreatePokemonSubscription subscription = OnCreatePokemonSubscription.builder().build();
+        AppSyncSubscriptionCall<OnCreatePokemonSubscription.Data> subscriptionWatcher = mAWSAppSyncClient.subscribe(subscription);
+        subscriptionWatcher.execute(new AppSyncSubscriptionCall.Callback<OnCreatePokemonSubscription.Data>() {
+            @Override
+            public void onResponse(@Nonnull Response<OnCreatePokemonSubscription.Data> response) {
+                Log.i("mnf.Subscription", response.data().toString());
+            }
+
+            @Override
+            public void onFailure(@Nonnull ApolloException e) {
+                Log.e("mnf.Subscription", e.toString());
+            }
+
+            @Override
+            public void onCompleted() {
+                Log.i("mnf.Subscription", "Subscription completed");
+            }
+        });
         return view;
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        Log.i("mnf", "about to make the query to get the battle squad");
+
+        mAWSAppSyncClient.query(
+                // builder pattern is like a drawn-out constructor with variable arguments
+                // new GetBattleSquadQuery("c6a...")
+                GetBattleSquadQuery.builder()
+                .id("c6a71067-fe5c-48c9-9171-f7f7f9d6d709")
+                .build())
+                .responseFetcher(NETWORK_FIRST)
+                .enqueue(new GraphQLCall.Callback<GetBattleSquadQuery.Data>() {
+                    @Override
+                    public void onResponse(@Nonnull Response<GetBattleSquadQuery.Data> response) {
+                        Log.i("mnf.pokemon", "we got data!" + response.data());
+                        for (GetBattleSquadQuery.Item i : response.data().getBattleSquad().pokemons().items()) {
+                            Log.i("mnf.pokemon", i.name() + " " + i.type());
+                        }
+                    }
+
+                    @Override
+                    public void onFailure(@Nonnull ApolloException e) {
+                        Log.e("mnf", "failed to get battle squad");
+                    }
+                });
+
+        mAWSAppSyncClient.query(ListPokemonsQuery.builder().build())
+                .responseFetcher(NETWORK_FIRST)
+                .enqueue(new GraphQLCall.Callback<ListPokemonsQuery.Data>() {
+                    @Override
+                    public void onResponse(@Nonnull Response<ListPokemonsQuery.Data> response) {
+                        // code that is here is running on the background thread
+                        Log.i("mnf", "this is logging from the background!");
+                        // send this bit of code to the UI thread, so it can run there
+                        Handler h = new Handler(Looper.getMainLooper()){
+                            @Override
+                            public void handleMessage(Message inputMessage) {
+                                // code inside of handleMessage will run on the UI thread! hooray!
+                                if(adapter == null) {
+                                    adapter = new MyPokemonRecyclerViewAdapter(null, mListener);
+                                    recyclerView.setAdapter(adapter);
+                                }
+                                adapter.setItems(response.data().listPokemons().items());
+                                adapter.notifyDataSetChanged();
+                            }
+                        };
+                        h.obtainMessage().sendToTarget();
+                    }
+
+                    @Override
+                    public void onFailure(@Nonnull ApolloException e) {
+
+                    }
+                });
     }
 
 
